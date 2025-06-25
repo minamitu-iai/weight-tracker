@@ -4,12 +4,17 @@ name: Generate Weight Graph
 on:
   push:
     branches:
-      - main  # mainブランチにプッシュされた時のみ実行
+      - main
+
+# ★★★ このブロックがエラーを解決します！ ★★★
+# Actionsがリポジトリに書き込むことを許可する
+permissions:
+  contents: write
 
 # 実行される一連のタスク（ジョブ）を定義
 jobs:
   build_graph:
-    runs-on: ubuntu-latest # ジョブを実行する仮想環境を指定（最新のUbuntu）
+    runs-on: ubuntu-latest # ジョブを実行する仮想環境を指定
 
     steps:
       # ステップ1: リポジトリのコードをチェックアウトする
@@ -20,7 +25,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.10' # 使用するPythonのバージョンを指定
+          python-version: '3.10'
 
       # ステップ3: 必要なPythonライブラリをインストールする
       - name: Install dependencies
@@ -38,6 +43,10 @@ jobs:
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
           git add weight_graph.png
-          # ファイルに変更があった場合のみコミットする
-          git diff --staged --quiet || git commit -m "Update weight graph"
-          git push
+          # ファイルに変更があった場合のみコミットとプッシュを行う
+          if ! git diff --staged --quiet; then
+            git commit -m "Update weight graph"
+            git push
+          else
+            echo "No changes to commit."
+          fi
