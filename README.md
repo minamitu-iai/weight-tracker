@@ -1,4 +1,4 @@
-# weight-tracker
-This is my weight
+# My Weight kg & Fat %
+
 
 ![Weight Trend](weight_graph.png)
