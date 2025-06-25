@@ -1,0 +1,43 @@
+name: Generate Weight Graph
+
+# ワークフローが実行されるタイミングを定義
+on:
+  push:
+    branches:
+      - main  # mainブランチにプッシュされた時のみ実行
+
+# 実行される一連のタスク（ジョブ）を定義
+jobs:
+  build_graph:
+    runs-on: ubuntu-latest # ジョブを実行する仮想環境を指定（最新のUbuntu）
+
+    steps:
+      # ステップ1: リポジトリのコードをチェックアウトする
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      # ステップ2: Python環境をセットアップする
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10' # 使用するPythonのバージョンを指定
+
+      # ステップ3: 必要なPythonライブラリをインストールする
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pandas matplotlib
+
+      # ステップ4: Pythonスクリプトを実行してグラフを生成する
+      - name: Generate graph
+        run: python plot_graph.py
+
+      # ステップ5: 生成されたグラフ画像をリポジトリにコミットしてプッシュする
+      - name: Commit and push graph
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add weight_graph.png
+          # ファイルに変更があった場合のみコミットする
+          git diff --staged --quiet || git commit -m "Update weight graph"
+          git push
