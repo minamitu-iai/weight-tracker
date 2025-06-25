@@ -4,63 +4,72 @@ import matplotlib.dates as mdates
 
 def generate_graph():
     """
-    CSVファイルから体重データを読み込み、ボリンジャーバンド付きのグラフを生成して
-    画像として保存する関数
+    CSVから体重と体脂肪率を読み込み、詳細な分析が可能な2段のグラフを生成する。
+    - 7日 & 21日移動平均
+    - 21日ボリンジャーバンド
+    - トレンド線を強調したカラーリング
     """
     try:
-        # CSVファイルを読み込む (前回の手順でファイル名は修正済みと仮定)
-        # もしファイル名が違う場合は、 'Record.csv' の部分を修正してください
+        # --- 1. パラメータと色の設定 ---
+        # 計算パラメータ
+        window_short = 7   # 短期移動平均の期間
+        window_long = 21   # 長期移動平均 & ボリンジャーバンドの期間
+        num_std_dev = 2    # ボリンジャーバンドの標準偏差の倍数
+
+        # カラー設定
+        color_actual = 'lightgray'       # 実測値の色 (目立たなくする)
+        color_ma_short = '#ff7f0e'       # 7日移動平均の色 (オレンジ系)
+        color_ma_long = '#9467bd'        # 21日移動平均の色 (紫系)
+        color_bollinger = 'gray'         # ボリンジャーバンドの塗りつぶし色
+
+        # --- 2. データの読み込みと計算 ---
         df = pd.read_csv('Record.csv', parse_dates=['date'])
         df = df.sort_values(by='date')
 
-        # --- ボリンジャーバンドの計算 ---
-        # パラメータ設定 (自由に変更可能です)
-        window = 20  # 移動平均の期間
-        num_std_dev = 2  # 標準偏差の倍数
+        # 体重データの計算
+        df['MA_weight_short'] = df['weight'].rolling(window=window_short).mean()
+        df['MA_weight_long'] = df['weight'].rolling(window=window_long).mean()
+        df['STD_weight'] = df['weight'].rolling(window=window_long).std()
+        df['Upper_weight'] = df['MA_weight_long'] + (df['STD_weight'] * num_std_dev)
+        df['Lower_weight'] = df['MA_weight_long'] - (df['STD_weight'] * num_std_dev)
 
-        # 移動平均 (MA) を計算
-        df['MA'] = df['weight'].rolling(window=window).mean()
-        # 標準偏差 (STD) を計算
-        df['STD'] = df['weight'].rolling(window=window).std()
-
-        # アッパーバンドとロワーバンドを計算
-        df['Upper'] = df['MA'] + (df['STD'] * num_std_dev)
-        df['Lower'] = df['MA'] - (df['STD'] * num_std_dev)
-        # -----------------------------
-
-        # グラフのプロット設定
-        fig, ax = plt.subplots(figsize=(12, 7))
-
-        # --- グラフの描画 ---
-        # 1. 体重の折れ線グラフ (メインのデータ)
-        ax.plot(df['date'], df['weight'], marker='o', linestyle='-', color='blue', label='Weight', zorder=3)
+        # 体脂肪率データの計算
+        df['MA_fat_short'] = df['fat'].rolling(window=window_short).mean()
+        df['MA_fat_long'] = df['fat'].rolling(window=window_long).mean()
+        df['STD_fat'] = df['fat'].rolling(window=window_long).std()
+        df['Upper_fat'] = df['MA_fat_long'] + (df['STD_fat'] * num_std_dev)
+        df['Lower_fat'] = df['MA_fat_long'] - (df['STD_fat'] * num_std_dev)
         
-        # 2. 移動平均線
-        ax.plot(df['date'], df['MA'], linestyle='--', color='orange', label=f'{window}-Day MA', zorder=4)
+        # --- 3. グラフの描画 ---
+        fig, axs = plt.subplots(2, 1, figsize=(14, 12), sharex=True)
+        fig.suptitle('Full Analysis: Weight & Body Fat', fontsize=20)
 
-        # 3. ボリンジャーバンド
-        #    アッパーバンドとロワーバンドの間を塗りつぶす
-        ax.fill_between(df['date'], df['Lower'], df['Upper'], color='gray', alpha=0.3, label='Bollinger Bands')
-        # -----------------------------
+        # 上の段：体重グラフ
+        axs[0].plot(df['date'], df['weight'], marker='.', linestyle='-', color=color_actual, label='Weight (kg)', zorder=1)
+        axs[0].plot(df['date'], df['MA_weight_short'], linestyle='-', color=color_ma_short, label=f'{window_short}-Day MA', zorder=3)
+        axs[0].plot(df['date'], df['MA_weight_long'], linestyle='--', color=color_ma_long, label=f'{window_long}-Day MA', zorder=4)
+        axs[0].fill_between(df['date'], df['Lower_weight'], df['Upper_weight'], color=color_bollinger, alpha=0.2, label='Bollinger Bands')
+        axs[0].set_ylabel('Weight (kg)')
+        axs[0].grid(True, which='both', linestyle='--', linewidth=0.5)
+        axs[0].legend()
 
-        # グラフの装飾
-        ax.set_title('Weight Fluctuation with Bollinger Bands', fontsize=16)
-        ax.set_xlabel('Date', fontsize=12)
-        ax.set_ylabel('Weight (kg)', fontsize=12)
-        ax.grid(True, which='both', linestyle='--', linewidth=0.5)
-        ax.legend() # 凡例を表示
+        # 下の段：体脂肪率グラフ
+        axs[1].plot(df['date'], df['fat'], marker='.', linestyle='-', color=color_actual, label='Body Fat (%)', zorder=1)
+        axs[1].plot(df['date'], df['MA_fat_short'], linestyle='-', color=color_ma_short, label=f'{window_short}-Day MA', zorder=3)
+        axs[1].plot(df['date'], df['MA_fat_long'], linestyle='--', color=color_ma_long, label=f'{window_long}-Day MA', zorder=4)
+        axs[1].fill_between(df['date'], df['Lower_fat'], df['Upper_fat'], color=color_bollinger, alpha=0.2, label='Bollinger Bands')
+        axs[1].set_ylabel('Body Fat (%)')
+        axs[1].set_xlabel('Date')
+        axs[1].grid(True, which='both', linestyle='--', linewidth=0.5)
+        axs[1].legend()
 
-        # X軸の日付フォーマットを設定
-        ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m-%d'))
+        # --- 4. 仕上げ ---
         fig.autofmt_xdate()
-
-        # グラフを画像ファイルとして保存する
+        fig.tight_layout(rect=[0, 0.03, 1, 0.97])
         plt.savefig('weight_graph.png', bbox_inches='tight')
+        
+        print("高機能分析グラフが正常に生成されました。")
 
-        print("ボリンジャーバンド付きのグラフが正常に生成され、'weight_graph.png'として保存されました。")
-
-    except FileNotFoundError:
-        print("エラー: CSVファイルが見つかりません。ファイル名を確認してください。")
     except Exception as e:
         print(f"エラーが発生しました: {e}")
 
