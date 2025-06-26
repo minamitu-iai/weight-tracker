@@ -1,6 +1,6 @@
 # My Weight [kg] & Fat [%]
 
-## Day 046 (Week 08)
+## Day 047 (Week 08)
 
 Start: 2025/05/11, 99.05kg/28.6%
 
